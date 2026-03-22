@@ -5,7 +5,8 @@ use tonic::transport::Server;
 use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowHeaders, AllowOrigin};
 use xr_overlay::{
-    openxr::{Posef, Quaternionf, Vector3f}, runner::DeviceRole
+    openxr::{Posef, Quaternionf, Vector3f},
+    runner::DeviceRole,
 };
 
 use crate::{
@@ -91,8 +92,8 @@ impl OyasumiOverlaySidecar for GrpcServer {
                         orientation: Quaternionf::IDENTITY,
                         position: Vector3f {
                             x: 0.0,
-                            y: 0.0,
-                            z: -0.3,
+                            y: -0.1,
+                            z: -0.8,
                         },
                     },
                     true,

@@ -15,13 +15,17 @@ use xr_overlay::{
         OverlayHandle, ShowMode, events::AppEvent,
     },
 };
-use xr_overlay_cef::{CefOverlayCreateInfo, create_cef_overlay};
+use xr_overlay_cef::{
+    CefOverlayCreateInfo,
+    cef::{ImplBrowser, ImplFrame},
+    create_cef_overlay,
+};
 pub static CACHE_PATH: LazyLock<PathBuf> =
     LazyLock::new(|| PathBuf::from("/tmp/oyasumi_sidecard_cef"));
 pub const DEFAULT_BINDINGS_CONFIG: &str = include_str!("../../bindings_config.toml");
 use crate::{
-    CONFIG, KILL, config::OverlayConfig, globals::textures, input::get_controller_create_info,
-    killed, model::Overlay,
+    CONFIG, HTTP_PORT, KILL, UI_PORT, WS_PORT, config::OverlayConfig, globals::textures,
+    input::get_controller_create_info, killed, model::Overlay,
 };
 pub static OVERLAY: OnceLock<Overlay> = OnceLock::new();
 pub static NOTIFICATION_OVERLAY: OnceLock<Overlay> = OnceLock::new();
@@ -241,6 +245,7 @@ pub fn openxr_show_hand() -> DeviceRole {
     (*SWITCH_HAND.lock().unwrap()).into()
 }
 pub static mut DASBOARD_VISIBLE: bool = false;
+pub static mut SPLASH_PLAYED: bool = false;
 pub fn show_dashboard() {
     trace!("show_dashboard");
     unsafe { DASBOARD_VISIBLE = true };
@@ -261,6 +266,26 @@ pub async fn hide_dashboard() {
         .write()
         .unwrap()
         .set_visible(OVERLAY.wait().xr_handle, false);
+    if unsafe { SPLASH_PLAYED } {
+        let url = format!(
+            "http://localhost:{}/dashboard?corePort={}",
+            UI_PORT.wait(),
+            HTTP_PORT.wait()
+        );
+        // let url_noti="https://google.com".to_string();
+        trace!("navigating to:{}", url);
+        OVERLAY
+            .get()
+            .as_ref()
+            .unwrap()
+            .browser
+            .main_frame()
+            .unwrap()
+            .load_url(Some(&(url.as_str()).into()));
+        unsafe { SPLASH_PLAYED = false };
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        OVERLAY.get().as_mut().unwrap().inject_ipc(*WS_PORT.wait());
+    }
 }
 pub static MIC_INDICATOR: std::sync::Mutex<Option<MicMuteIndicator>> = std::sync::Mutex::new(None);
 

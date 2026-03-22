@@ -9,6 +9,10 @@ use std::{
 use log::{info, trace};
 use oyasumi_shared::{OVERLAY_CONFIG_PATH, XR_BINDING_FILE_PATH, get_log_path};
 use tonic::transport::Channel;
+use xr_overlay::{
+    openxr::{Posef, Quaternionf, Vector3f},
+    runner::DeviceRole,
+};
 use xr_overlay_cef::{
     cef::{ImplBrowser, ImplFrame},
     disable_vr, pointless_cef_thread_spawner,
@@ -23,8 +27,8 @@ use crate::{
     overlay_ipc::start_websocket_server,
     ui::serve_ui,
     vr::{
-        CACHE_PATH, DEFAULT_BINDINGS_CONFIG, NOTIFICATION_OVERLAY, OVERLAY, show_dashboard,
-        start_vr,
+        CACHE_PATH, DEFAULT_BINDINGS_CONFIG, NOTIFICATION_OVERLAY, OVERLAY, SPLASH_PLAYED, XR_CTX,
+        hide_dashboard, show_dashboard, start_vr,
     },
 };
 pub mod config;
@@ -71,16 +75,20 @@ fn main() {
             std::thread::current().id()
         );
 
-        std::fs::write(panic_log_path.join(PathBuf::from(&path)), format!("{:?}", &e)).ok();
+        std::fs::write(
+            panic_log_path.join(PathBuf::from(&path)),
+            format!("{:?}", &e),
+        )
+        .ok();
         println!(
             "Writing panic log to {:#?} open an issue https://github.com/sofoxe1/OyasumiVR/issues and inclue {:#?} ",
             panic_log_path,
             oyasumi_shared::get_log_path().join("overlay.log")
         );
-        log::error!("PANIC: {:?}",e);
+        log::error!("PANIC: {:?}", e);
         hook(e);
     }));
-    
+
     let mut binding = env_logger::Builder::new();
     let mut logger = binding.filter_level(log::LevelFilter::Trace);
     static mut MAIN: bool = false;
@@ -116,7 +124,7 @@ fn main() {
     pointless_cef_thread_spawner();
     let f = File::create(get_o_log_path()).unwrap();
     f_.lock().unwrap().replace(f);
-   
+
     unsafe { MAIN = true };
 
     trace!(
@@ -178,6 +186,9 @@ fn main() {
 static HANDLES: LazyLock<Mutex<Vec<tokio::task::JoinHandle<()>>>> = LazyLock::new(Mutex::default);
 
 static CORE_CLIENT: OnceLock<tokio::sync::Mutex<OyasumiCoreClient<Channel>>> = OnceLock::new();
+static UI_PORT: OnceLock<u16> = OnceLock::new();
+static HTTP_PORT: OnceLock<u16> = OnceLock::new();
+static WS_PORT:OnceLock<u16>=OnceLock::new();
 async fn tokio_main() {
     trace!("tokio_main");
     tokio::task::spawn(async {
@@ -221,11 +232,13 @@ async fn tokio_main() {
         }
         false => serve_ui().await,
     };
+    HTTP_PORT.set(http_port as u16).unwrap();
+    UI_PORT.set(ui_port).unwrap();
+
     log::info!("ui port:{}", ui_port);
-    let url = format!(
-        "http://localhost:{}/dashboard?corePort={}",
-        ui_port, http_port
-    );
+     std::thread::sleep(Duration::from_millis(100));
+    let url = format!("http://localhost:{}/splash?corePort={}", ui_port, http_port);
+    unsafe { SPLASH_PLAYED = true };
     let url_noti = format!(
         "http://localhost:{}/notifications?corePort={}",
         ui_port, http_port
@@ -233,6 +246,7 @@ async fn tokio_main() {
     // let url_noti="https://google.com".to_string();
     trace!("navigating to:{}", url);
     let ws_port = start_websocket_server().await;
+    WS_PORT.set(ws_port).unwrap();
     log::info!("ws port:{}", ws_port);
     OVERLAY
         .get()
@@ -263,10 +277,32 @@ async fn tokio_main() {
     log::info!("sent onstart");
     assert_ne!(grpc_web_server_pos, 0);
     assert_ne!(grpc_server_port, 0);
-
-    show_dashboard();
-    log::info!("initial overlay show");
+    XR_CTX
+        .get()
+        .unwrap()
+        .write()
+        .unwrap()
+        .set_posef_relative(
+            DeviceRole::Hmd,
+            OVERLAY.get().unwrap().xr_handle,
+            Posef {
+                orientation: Quaternionf::IDENTITY,
+                position: Vector3f {
+                    x: 0.0,
+                    y: -0.2,
+                    z: -1.2,
+                },
+            },
+            true,
+        )
+        .unwrap();
     tokio::time::sleep(Duration::from_millis(400)).await;
+    log::info!("initial overlay show");
+    show_dashboard();
+    tokio::task::spawn(async {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        hide_dashboard().await;
+    });
     NOTIFICATION_OVERLAY
         .get()
         .as_ref()

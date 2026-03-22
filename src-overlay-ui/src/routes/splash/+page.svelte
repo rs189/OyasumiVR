@@ -13,7 +13,7 @@
 	let showIcon = false;
 	let showLogoText = false;
 	let showTagLine = false;
-
+	let speed=7;
 	// setTimeout(() => {}, 100);
 	setTimeout(() => {
 		showIcon = true;
@@ -25,13 +25,10 @@
 					showIcon = false;
 					showLogoText = false;
 					showTagLine = false;
-					setTimeout(() => {
-						window.OyasumiIPCOut.dispose();
-					}, 2000);
-				}, 5000);
-			}, 200);
-		}, 200);
-	}, 200);
+				}, 5000*(1/speed));
+			}, 200*(1/speed));
+		}, 200*(1/speed));
+	}, 200*(1/speed));
 </script>
 
 {#if ready}
@@ -40,12 +37,12 @@
 		class:non-overlay={!window.CefSharp}
 	>
 		{#if showIcon}
-			<div class="stack-frame" transition:fade|global={{ duration: 800 }}>
+			<div class="stack-frame" transition:fade|global={{ duration: 800*(1/speed) }}>
 				<div class="w-1/2 h-1/2 bg-black blur-[75px] rounded-full opacity-20 translate-y-[-20px]" />
 			</div>
 		{/if}
 		{#if showLogoText}
-			<div class="stack-frame" transition:fade|global={{ duration: 800 }}>
+			<div class="stack-frame" transition:fade|global={{ duration: 800*(1/speed) }}>
 				>
 				<div
 					class="w-1/2 h-1/2 bg-black blur-[130px] rounded-full opacity-20 translate-y-[150px] scale-y-[0.3]"
@@ -55,8 +52,8 @@
 		{#if showIcon}
 			<div
 				class="stack-frame"
-				in:blur|global={{ duration: 800 }}
-				out:blur|global={{ duration: 1500 }}
+				in:blur|global={{ duration: 800*(1/speed) }}
+				out:blur|global={{ duration: 1500*(1/speed) }}
 			>
 				<div
 					class="w-[250px] h-[250px] overflow-hidden rounded-[50px] drop-shadow-[0_0_16px_rgba(255,255,255,100%)] translate-y-[-100px]"
@@ -67,11 +64,11 @@
 		{/if}
 		<!-- LOGO TEXT -->
 		{#if showLogoText}
-			<div class="stack-frame" transition:blur|global={{ duration: 1500 }}>
+			<div class="stack-frame" transition:blur|global={{ duration: 1500*(1/speed) }}>
 				<div
 					class="logo-text glow-100 translate-y-[120px]"
-					in:fly|global={{ duration: 800, delay: 200, y: 100 }}
-					out:blur|global={{ duration: 1500 }}
+					in:fly|global={{ duration: 800*(1/speed), delay: 200*(1/speed), y: 100 }}
+					out:blur|global={{ duration: 1500*(1/speed) }}
 				>
 					<span class="text-[80px] text-white font-extralight">Oyasumi</span>
 					<span class="text-[80px] text-white font-medium">VR</span>
@@ -80,11 +77,11 @@
 		{/if}
 		<!-- TAGLINE -->
 		{#if showTagLine}
-			<div class="stack-frame" transition:blur|global={{ duration: 1500 }}>
+			<div class="stack-frame" transition:blur|global={{ duration: 1500*(1/speed) }}>
 				<div
 					class="text-[28px] text-white opacity-80 glow-100 translate-x-[70px] translate-y-[170px]"
-					in:fly|global={{ duration: 800, delay: 200, y: 100 }}
-					out:blur|global={{ duration: 1500 }}
+					in:fly|global={{ duration: 800*(1/speed), delay: 200*(1/speed), y: 100 }}
+					out:blur|global={{ duration: 1500*(1/speed) }}
 				>
 					{$t('t.shared.logo.tagline')}
 				</div>
