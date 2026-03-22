@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
-use log::{error, info};
+use log::{error, info, trace};
 use tonic::transport::Server;
 use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowHeaders, AllowOrigin};
@@ -78,6 +78,7 @@ impl OyasumiOverlaySidecar for GrpcServer {
         &self,
         request: tonic::Request<OverlayMenuOpenRequest>,
     ) -> Result<tonic::Response<Empty>, tonic::Status> {
+        trace!("open_overlay_menu");
         if let Some(ctx) = XR_CTX.get()
             && let Some(overlay) = OVERLAY.get()
         {
@@ -109,6 +110,7 @@ impl OyasumiOverlaySidecar for GrpcServer {
         &self,
         request: tonic::Request<Empty>,
     ) -> Result<tonic::Response<Empty>, tonic::Status> {
+        trace!("close_overlay_menu");
         hide_dashboard().await;
         Ok(Empty {}.into())
     }
@@ -117,6 +119,7 @@ impl OyasumiOverlaySidecar for GrpcServer {
         &self,
         request: tonic::Request<OverlayMenuOpenRequest>,
     ) -> Result<tonic::Response<Empty>, tonic::Status> {
+        trace!("toggle_overlay_menu");
         match unsafe { DASBOARD_VISIBLE } {
             true => hide_dashboard().await,
             false => show_dashboard(),

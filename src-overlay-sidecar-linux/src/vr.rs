@@ -211,8 +211,6 @@ fn openxr_callback(event: AppEvent) {
         AppEvent::OverlayVisibilityChanged { handle: _, visible } => {
             if visible {
                 OVERLAY.get().as_ref().unwrap().show_dashboard();
-            }
-            if visible {
                 log::info!("overlay showed");
             } else {
                 log::info!("overlay hidden");
@@ -220,8 +218,11 @@ fn openxr_callback(event: AppEvent) {
         }
         AppEvent::OverlayHiding {
             handle: _,
-            frames_left: _,
-        } => OVERLAY.get().as_ref().unwrap().hide_dashboard(),
+            frames_left: frames,
+        } => {
+            trace!("hiding animation:{}", frames);
+            OVERLAY.get().as_ref().unwrap().hide_dashboard()
+        }
         AppEvent::OverlayVisibilityChangedLastInput {
             handle,
             visible,
