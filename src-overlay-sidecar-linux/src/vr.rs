@@ -17,7 +17,7 @@ use xr_overlay::{
 };
 use xr_overlay_cef::{
     CefOverlayCreateInfo,
-    cef::{ImplBrowser, ImplFrame},
+    cef::{ImplBrowser, ImplFrame, LogSeverity},
     create_cef_overlay,
 };
 pub static CACHE_PATH: LazyLock<PathBuf> =
@@ -104,6 +104,8 @@ pub fn start_vr() -> Option<JoinHandle<()>> {
             disable_dragging: true,
             reference_space: Some(config.main_overlay.reference_space),
             cache_path: Some(CACHE_PATH.clone()),
+            #[cfg(debug_assertions)]
+            cef_log_severity:LogSeverity::VERBOSE,
             ..Default::default()
         },
     );
@@ -124,6 +126,8 @@ pub fn start_vr() -> Option<JoinHandle<()>> {
             name: Some("notifications".into()),
             reference_space: Some(config.notification_overlay.reference_space),
             cache_path: Some(CACHE_PATH.clone()),
+            #[cfg(debug_assertions)]
+            cef_log_severity:LogSeverity::VERBOSE,
             ..Default::default()
         },
     );
