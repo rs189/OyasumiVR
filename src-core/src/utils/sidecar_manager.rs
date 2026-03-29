@@ -32,6 +32,7 @@ pub struct SidecarManager {
     pub on_stop_tx: mpsc::Sender<()>,
     pub auto_restart: bool,
     pub args: Arc<Mutex<Vec<String>>>,
+    pub killed: Mutex<bool>,
 }
 unsafe impl Send for SidecarManager {}
 unsafe impl Sync for SidecarManager {}
@@ -56,6 +57,7 @@ impl SidecarManager {
             on_stop_tx,
             auto_restart,
             args: Arc::new(Mutex::new(args)),
+            killed: Mutex::default(),
         }
     }
 
@@ -88,6 +90,8 @@ impl SidecarManager {
                 if let Err(e) = sidecar_child.kill() {
                     error!("[Core] Failed to kill {} sidecar: {}", self.sidecar_id, e);
                 }
+            }else {
+                warn!("sidecar child empty");
             }
         }
         // Start the process if it was not already running, or if auto_restart is not set
@@ -98,6 +102,15 @@ impl SidecarManager {
     #[allow(dead_code)]
     pub async fn start(&mut self) -> u32 {
         self._start_internal(false).await
+    }
+    pub async fn stop(&mut self) {
+        info!("stopping overlay sidecar");
+        if let Some(overlay) = self.sidecar_child.lock().await.as_mut() {
+            *self.killed.lock().await = true;
+            let _ = overlay.kill();
+        } else {
+            warn!("tried to stop overlay but it's not running");
+        }
     }
 
     async fn _start_internal(&mut self, relaunch: bool) -> u32 {
@@ -168,7 +181,7 @@ impl SidecarManager {
         tokio::task::spawn(async move {
             loop {
                 tokio::time::sleep(Duration::from_secs(1)).await;
-                let mut guard=self_.sidecar_child.lock().await;
+                let mut guard = self_.sidecar_child.lock().await;
                 if let Some(child) = &mut *guard {
                     //process exit code should be collected
                     if let Some(exit_code) = child.try_wait().unwrap() {
@@ -177,7 +190,7 @@ impl SidecarManager {
                             *self_.active.get() = false;
                         }
                         drop(guard);
-                        if let Some(xr)=OXR_HANDLE.get(){
+                        if let Some(xr) = OXR_HANDLE.get() {
                             xr.lock().await.run();
                         }
                         break;
@@ -283,6 +296,11 @@ impl SidecarManager {
                 }
                 // Automatically try restarting the sidecar if desired
                 if self_.auto_restart {
+                    if *self_.killed.lock().await {
+                        *self_.killed.lock().await = false;
+                        *self_.active.get_mut() = false;
+                        break;
+                    }
                     let retry_interval = LAUNCH_RETRY_INTERVALS[retries];
                     tokio::time::sleep(retry_interval).await;
                     retries += 1;

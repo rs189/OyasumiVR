@@ -1,7 +1,7 @@
 use crate::{
+    Models::oyasumi_core::OverlaySidecarStartArgs,
     globals::{OVERLAY_SIDECAR_GRPC_DEV_PORT, OVERLAY_SIDECAR_GRPC_WEB_DEV_PORT},
     utils::models::OverlaySidecarMode,
-    Models::oyasumi_core::OverlaySidecarStartArgs,
 };
 
 #[tauri::command]
@@ -25,6 +25,20 @@ pub async fn start_overlay_sidecar(gpu_acceleration: bool) {
                 grpc_web_port: OVERLAY_SIDECAR_GRPC_WEB_DEV_PORT as u32,
             })
             .await;
+        }
+    }
+}
+#[tauri::command]
+#[oyasumivr_macros::command_profiling]
+pub async fn stop_overlay_sidecar() {
+    match crate::utils::cli_sidecar_overlay_mode().await {
+        OverlaySidecarMode::Release => {
+            let mut sidecar_manager_guard = super::SIDECAR_MANAGER.lock().await;
+            let sidecar_manager = sidecar_manager_guard.as_mut().unwrap();
+            sidecar_manager.stop().await;
+        }
+        OverlaySidecarMode::Dev => {
+            
         }
     }
 }
@@ -56,4 +70,3 @@ pub async fn overlay_sidecar_get_grpc_port() -> Option<u32> {
         None => None,
     }
 }
-

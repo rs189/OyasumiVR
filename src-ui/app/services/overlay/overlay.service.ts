@@ -1,9 +1,7 @@
 import { Injectable } from '@angular/core';
 import { IPCService } from '../ipc.service';
-import { map, pairwise, switchMap, take, tap } from 'rxjs';
-import {
-  Empty,
-} from '../../../../src-grpc-web-client/overlay-sidecar_pb';
+import { filter, map, switchMap, take } from 'rxjs';
+import { Empty } from '../../../../src-grpc-web-client/overlay-sidecar_pb';
 import { AppSettingsService } from '../app-settings.service';
 import { APP_SETTINGS_DEFAULT, AppSettings } from '../../models/settings';
 
@@ -16,7 +14,6 @@ import { VRChatService } from '../vrchat-api/vrchat.service';
 export class OverlayService {
   public readonly sidecarStarted = this.ipcService.overlaySidecarClient.pipe(map(Boolean));
   private appSettings: AppSettings = structuredClone(APP_SETTINGS_DEFAULT);
-
   constructor(
     private ipcService: IPCService,
     private appSettingsService: AppSettingsService,
@@ -24,38 +21,22 @@ export class OverlayService {
   ) {}
 
   async init() {
+    this.appSettingsService.settings.pipe(
+      map((config)=>config.overlayMenuEnabled)
+    ).subscribe((enabled)=>{
+      if (!enabled){
+        this.kill();
+      }else{
+        this.startOrRestartSidecar(this.appSettings.overlayGpuAcceleration);
+      }
+    });
     // Start the sidecar on launch
     this.appSettingsService.settings
       .pipe(
         take(1),
+        filter((config) => config.overlayMenuEnabled),
         map((config) => config.overlayGpuAcceleration),
         switchMap((gpuAcceleration) => this.startOrRestartSidecar(gpuAcceleration))
-      )
-      .subscribe();
-    // Respond to settings changes
-    this.appSettingsService.settings
-      .pipe(
-        // Store the settings on the service
-        tap((settings) => (this.appSettings = settings)),
-        pairwise(),
-        tap(([previous, current]) => {
-          // When disabling the overlay menu, close it if it's currently open
-          if (!current.overlayMenuEnabled && previous.overlayMenuEnabled) {
-            this.ipcService.getOverlaySidecarClient()?.closeOverlayMenu({} as Empty);
-          }
-          // When changing the GPU fix setting, restart the sidecar
-          if (current.overlayGpuAcceleration !== previous.overlayGpuAcceleration) {
-            this.startOrRestartSidecar(current.overlayGpuAcceleration);
-          }
-          // When enabling the overlay menu only open when VRChat is running setting, close the overlay menu if it's open
-          if (
-            current.overlayMenuOnlyOpenWhenVRChatIsRunning &&
-            current.overlayMenuOnlyOpenWhenVRChatIsRunning !==
-              previous.overlayMenuOnlyOpenWhenVRChatIsRunning
-          ) {
-            this.ipcService.getOverlaySidecarClient()?.closeOverlayMenu({} as Empty);
-          }
-        })
       )
       .subscribe();
     // Respond to VRChat process state changes
@@ -68,6 +49,9 @@ export class OverlayService {
   }
 
   private async startOrRestartSidecar(gpuAcceleration: boolean) {
-    await invoke('start_overlay_sidecar', { gpuAcceleration });
+      await invoke('start_overlay_sidecar', { gpuAcceleration });
+  }
+  private async kill() {
+      await invoke('stop_overlay_sidecar');
   }
 }

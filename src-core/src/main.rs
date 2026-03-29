@@ -34,7 +34,6 @@ use oyasumi_shared::get_log_path;
 use tauri::{Manager, Wry, plugin::TauriPlugin};
 use tauri_plugin_cli::CliExt;
 use tauri_plugin_log::RotationStrategy;
-use xr_overlay::vulkano;
 
 #[macro_export]
 macro_rules! warn_unimplemented {
@@ -393,6 +392,7 @@ fn configure_command_handlers() -> impl Fn(tauri::ipc::Invoke) -> bool {
         elevated_sidecar::commands::elevated_sidecar_get_grpc_web_port,
         elevated_sidecar::commands::elevated_sidecar_get_grpc_port,
         overlay_sidecar::commands::start_overlay_sidecar,
+        overlay_sidecar::commands::stop_overlay_sidecar,
         overlay_sidecar::commands::overlay_sidecar_get_grpc_web_port,
         overlay_sidecar::commands::overlay_sidecar_get_grpc_port,
         system_tray::commands::set_close_to_system_tray,
