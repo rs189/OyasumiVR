@@ -21,6 +21,15 @@ export class OverlayService {
   ) {}
 
   async init() {
+    var gpu=this.appSettings.overlayGpuAcceleration;
+    this.appSettingsService.settings.pipe(
+      map((config)=>config.overlayGpuAcceleration)
+    ).subscribe((enabled)=>{
+      if (gpu!=enabled){
+        gpu=enabled;
+      }
+      this.startOrRestartSidecar(enabled);
+    });
     this.appSettingsService.settings.pipe(
       map((config)=>config.overlayMenuEnabled)
     ).subscribe((enabled)=>{
