@@ -200,13 +200,14 @@ fn configure_tauri_plugin_log() -> TauriPlugin<Wry> {
 }
 
 async fn app_setup(app_handle: tauri::AppHandle) {
-    fn get_gpu() -> Option<String> {
+    fn get_gpus() -> Box<[String]> {
+        let mut vec = Vec::new();
         match Command::new("glxinfo").output() {
             Ok(v) => {
                 let s = String::from_utf8_lossy(&v.stdout).to_string();
                 for l in s.lines() {
                     if l.starts_with("OpenGL renderer string: ") {
-                        return Some(
+                        vec.push(
                             l.chars()
                                 .skip("OpenGL renderer string: ".len())
                                 .collect::<String>(),
@@ -219,9 +220,12 @@ async fn app_setup(app_handle: tauri::AppHandle) {
                     let s = String::from_utf8_lossy(&v.stdout).to_string();
                     for l in s.lines() {
                         if l.contains("VGA compatible controller") {
+                            let l = l.split(":").nth(2);
+                            if l.is_none() {
+                                continue;
+                            }
+                            let l = l.unwrap();
                             let mut l = l
-                                .split(":")
-                                .nth(2)?
                                 .chars()
                                 .skip_while(|x| *x != '[')
                                 .collect::<String>()
@@ -230,22 +234,25 @@ async fn app_setup(app_handle: tauri::AppHandle) {
                                 .collect::<Vec<String>>();
                             l.pop();
                             let l = l.into_iter().map(|s| format!("{} ", s)).collect::<String>();
-                            return Some(l);
+                            vec.push(l);
                         }
                     }
                 }
             }
         };
-        None
+        if vec.is_empty() {
+            vec.push("Unknown".to_string());
+        }
+        vec.into_boxed_slice()
     }
     let release = os_release::OS_RELEASE
         .as_ref()
         .map(|r| format!("{} {}", r.name, r.version_id))
         .unwrap_or("Unknown".into());
     info!(
-        "[Core] Specs:\n Distro: {}\n Gpu: {}",
+        "[Core] Specs:\n Distro: {}\n Gpus:\n {:#?}",
         release,
-        get_gpu().unwrap_or("Unknown".into())
+        get_gpus()
     );
     info!(
         "[Core] Starting OyasumiVR in {} mode",
