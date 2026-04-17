@@ -10,20 +10,20 @@ pub static STATE: Mutex<Option<OyasumiSidecarState>> = Mutex::const_new(None);
 pub mod textures {
     use std::{io::Cursor, sync::LazyLock};
 
-    use xr_overlay::RgbaTexture;
+    use xr_overlay::{Texture, vulkano::format::Format};
 
-    pub static MIC_MUTE: LazyLock<RgbaTexture> =
+    pub static MIC_MUTE: LazyLock<Texture> =
         LazyLock::new(|| decode_texture(include_bytes!("Resources/mic_mute.png")));
-    pub static MIC_UNMUTE: LazyLock<RgbaTexture> =
+    pub static MIC_UNMUTE: LazyLock<Texture> =
         LazyLock::new(|| decode_texture(include_bytes!("Resources/mic_unmute.png")));
-    pub static POINTER: LazyLock<RgbaTexture> =
+    pub static POINTER: LazyLock<Texture> =
         LazyLock::new(|| decode_texture(include_bytes!("Resources/pointer.png")));
     // #[cfg(debug_assertions)]
     // #[allow(dead_code)]
     // pub static TEST: LazyLock<RgbaTexture> =
     //     LazyLock::new(|| decode_texture(include_bytes!("Resources/test.png")));
     #[inline(never)]
-    fn decode_texture(bytes: &[u8]) -> RgbaTexture {
+    fn decode_texture(bytes: &[u8]) -> Texture {
         let image = image::ImageReader::new(Cursor::new(bytes))
             .with_guessed_format()
             .unwrap()
@@ -34,6 +34,6 @@ pub mod textures {
         let width = image.width();
         let mut bytes = image.into_raw();
         bytes.shrink_to_fit();
-        RgbaTexture::new(width, height, bytes)
+        Texture::new(width, height, bytes, Format::R8G8B8A8_UNORM)
     }
 }

@@ -14,8 +14,7 @@ use xr_overlay::{
     runner::DeviceRole,
 };
 use xr_overlay_cef::{
-    cef::{ImplBrowser, ImplFrame},
-    disable_vr, pointless_cef_thread_spawner,
+    cef::{ImplBrowser, ImplFrame}, disable_gpu, disable_vr, pointless_cef_thread_spawner
 };
 
 use crate::{
@@ -144,7 +143,7 @@ fn main() {
         disable_gpu: args.get(3).cloned().unwrap_or_default() == "--disable-gpu-acceleration",
     };
     if args.disable_gpu {
-        panic!("software rendering is not implemented");
+        disable_gpu();
     }
     if args.core_grpc_port == 0 && args.core_pid == 0 {
         args.core_grpc_port = globals::CORE_GRPC_DEV_PORT;
