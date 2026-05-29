@@ -49,6 +49,11 @@ async fn main() {
     unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
     //workaround for webkit bug https://github.com/tauri-apps/tauri/issues/9394
     unsafe { std::env::set_var("__NV_DISABLE_EXPLICIT_SYNC", "1") };
+    //NVIDIA proprietary driver doesn't support GBM (uses EGLStreams), so disable GPU compositing in WebKit
+    //to avoid "Failed to create GBM buffer" errors. Only applies on NVIDIA — no effect on AMD/Intel/Nouveau.
+    if cfg!(target_os = "linux") && std::path::Path::new("/proc/driver/nvidia/version").exists() {
+        unsafe { std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1") };
+    }
 
     if let Ok(tz) = tz::TimeZone::local()
         && let Ok(tz_name) = tz.find_current_local_time_type()
